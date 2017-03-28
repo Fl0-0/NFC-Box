@@ -274,7 +274,7 @@ losetup -D
 
 cd $basedir
 
-# Compressing with bzip2 and terminating
+# Compressing with xz and terminating
 echo "PI-BUILDER: Compressing, then terminating"
 xz -9 -T 0 ./rpi_${distrib_name}_${deb_release}_${deb_arch}_${mydate}.img
 rm ./.pibuild-$1
