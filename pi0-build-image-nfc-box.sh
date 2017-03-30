@@ -85,6 +85,9 @@ echo "i2c-dev
 dwc2
 g_ether" >> etc/modules
 
+# IBM Remote USB RNDIS vendor and product IDs for Windows auto detection
+echo "options g_ether idVendor=0x04b3 idProduct=0x4010
+" > etc/modprobe.d/g_ether.conf
 
 # Mounts
 echo "proc            /proc           proc    defaults        0       0
