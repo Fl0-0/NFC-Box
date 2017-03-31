@@ -121,13 +121,22 @@ def nfc_write_chinese(dump):
 		return -1
 
 def nfc_write_normal(dump):
-	cmd = "nfc-mfclassic w a" + dumps_dir + dump + " " + dumps_dir + dump + " f"
-	p = Popen(cmd, stdout=PIPE, stderr=PIPE, shell=True)
+	cmda = "nfc-mfclassic w A " + dumps_dir + dump + " " + dumps_dir + dump + " f"
+	cmdb = "nfc-mfclassic w B " + dumps_dir + dump + " " + dumps_dir + dump + " f"
+	p = Popen(cmda, stdout=PIPE, stderr=PIPE, shell=True)
 	stdout, stderr = p.communicate()
-	code = p.wait()
-	match = re.search('Done,.*written', stdout)
+	match = re.search('Done,\s([0-9]+).*written', stdout)
 	if match:
-		return 0
+		if match.group(1) == "63":
+			return 0
+		else:
+			p = Popen(cmdb, stdout=PIPE, stderr=PIPE, shell=True)
+			stdout, stderr = p.communicate()
+			match = re.search('Done,\s([0-9]+).*written', stdout)
+			if match:
+				return 0
+			else:
+				return -1
 	else:
 		return -1
 
