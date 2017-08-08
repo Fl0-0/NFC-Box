@@ -7,7 +7,7 @@ from PIL import ImageDraw
 import os, fnmatch, time
 from subprocess import PIPE, Popen
 import re
-from luma.core.serial import i2c
+from luma.core.interface.serial import i2c
 from luma.oled.device import sh1106
 
 GPIO.setmode(GPIO.BCM)
