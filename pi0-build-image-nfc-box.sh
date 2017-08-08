@@ -142,7 +142,7 @@ apt-get -y dist-upgrade
 apt-get -y install ttf-mscorefonts-installer
 apt-get -y autoremove --purge
 apt-get -y autoclean
-pip install RPi.GPIO luma.oled
+pip install Pillow==4.1.1 RPi.GPIO luma.oled
 chmod +x /root/nfc_box/menu_nfcbox.py
 chmod +x /usr/bin/mfoc
 chmod +x /root/nfc_box/remount-slash.sh
