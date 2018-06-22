@@ -14,7 +14,7 @@
 mydate=`date +%Y%m%d-%H%M`
 
 # Size of the image and boot partitions
-imgsize="964M"
+imgsize="1800M"
 bootsize="64M"
 
 # Location of the build environment, where the image will be mounted during build
@@ -24,7 +24,7 @@ buildenv="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )/BuildEnv"
 
 distrib_name="raspbian"
 deb_mirror="http://archive.raspbian.org/raspbian"
-deb_release="jessie"
+deb_release="stretch"
 deb_arch="armhf"
 echo "PI-BUILDER: Building $distrib_name Image"
 
@@ -48,7 +48,7 @@ cd $buildenv
 
 #  start the debootstrap of the system
 echo "PI-BUILDER: debootstraping..."
-debootstrap --variant=minbase --no-check-gpg --foreign --arch $deb_arch $deb_release $buildenv $deb_mirror
+debootstrap --no-check-gpg --foreign --arch $deb_arch $deb_release $buildenv $deb_mirror
 cp /usr/bin/qemu-arm-static usr/bin/
 
 # Copy files before chroot
@@ -65,7 +65,7 @@ echo "deb $deb_mirror $deb_release main contrib non-free
 deb-src $deb_mirror $deb_release main contrib non-free" > etc/apt/sources.list
 
 # Boot commands
-echo "dwc_otg.lpm_enable=0 console=ttyAMA0,115200 console=tty1 root=/dev/mmcblk0p2 rootfstype=ext4 elevator=deadline fsck.repair=yes rootwait quiet fastboot noswap ro" > boot/cmdline.txt
+echo "dwc_otg.lpm_enable=0 console=ttyAMA0,115200 console=tty1 root=/dev/mmcblk0p2 rootfstype=ext4 init=/bin/systemd elevator=deadline fsck.repair=yes rootwait quiet fastboot noswap ro" > boot/cmdline.txt
 
 # Set gpu_mem to minimum, enable turbo mode, disable HDMI output, enable SPI & i2c
 echo "gpu_mem=16
@@ -121,11 +121,29 @@ netmask 255.255.255.0
 
 # Console settings
 echo "console-common	console-data/keymap/policy	select	Select keymap from full list
-console-common	console-data/keymap/full	select	de-latin1-nodeadkeys
+console-common	console-data/keymap/full	select	us
 " > debconf.set
+
+echo "#!/bin/sh -e
+/root/nfc_box/menu_nfcbox.py &
+exit 0
+" > usr/bin/menu_nfcbox.sh
+chmod +x usr/bin/menu_nfcbox.sh
+cat << EOF > lib/systemd/system/nfc-box.service
+[Unit]
+Description=NFC Box Graphical interface
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/bin/menu_nfcbox.sh
+[Install]
+WantedBy=multi-user.target
+EOF
+chmod +x lib/systemd/system/nfc-box.service
 
 # Third Stage Setup Script (most of the setup process)
 echo "#!/bin/bash
+export DEBIAN_FRONTEND=noninteractive
 debconf-set-selections /debconf.set
 rm -f /debconf.set
 apt-get update
@@ -147,18 +165,23 @@ chmod +x /root/nfc_box/menu_nfcbox.py
 chmod +x /usr/bin/mfoc
 chmod +x /root/nfc_box/remount-slash.sh
 ln -s /root/nfc_box/remount-slash.sh /root/remount-slash.sh
-mkdir /etc/nfc
 wget https://raw.githubusercontent.com/Hexxeh/rpi-update/master/rpi-update -O /usr/bin/rpi-update
 chmod +x /usr/bin/rpi-update
 SKIP_WARNING=1 SKIP_BACKUP=1 UPDATE_SELF=0 rpi-update
 echo \"root:toor\" | chpasswd
 echo 'HWCLOCKACCESS=no' >> /etc/default/hwclock
 echo 'RAMTMP=yes' >> /etc/default/tmpfs
+ln -sf /usr/lib/systemd/system/multi-user.target /etc/systemd/system/default.target
 ln -s /tmp/random-seed /var/lib/systemd/random-seed
 echo \"ExecStartPre=/bin/echo '' >/tmp/random-seed\" >> /lib/systemd/system/systemd-random-seed.service
-ln -s /proc/self/mounts /etc/mtab
-sed -i 's/^PermitRootLogin without-password/PermitRootLogin yes/' /etc/ssh/sshd_config
+mkdir /var/lib/systemd/coredump
+rm /etc/systemd/system/sysinit.target.wants/systemd-timesyncd.service
+rm /etc/systemd/system/syslog.service
+ln -sf ../proc/self/mounts /etc/mtab
+sed -i -e 's/^INTERFACESv4=\"\"/INTERFACESv4=\"usb0\"/' /etc/default/isc-dhcp-server
+sed -i -e 's/^#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config
 sed -i 's/^\"syntax on/syntax on/' /etc/vim/vimrc
+ln -sf /lib/systemd/system/nfc-box.service /etc/systemd/system/multi-user.target.wants/nfc-box.service
 rm -f third-stage
 " > third-stage
 chmod +x third-stage
@@ -172,26 +195,8 @@ max-lease-time 72;
 authoritative;
 subnet 192.168.2.0 netmask 255.255.255.0 {
 range 192.168.2.2 192.168.2.10;
-option routers 192.168.2.1;
+#/option routers 192.168.2.1;
 }' > etc/dhcp/dhcpd.conf
-
-echo "#!/bin/sh -e
-#
-# rc.local
-#
-# This script is executed at the end of each multiuser runlevel.
-# Make sure that the script will \"exit 0\" on success or any other
-# value on error.
-#
-# In order to enable or disable this script just change the execution
-# bits.
-#
-# By default this script does nothing.
-
-/root/nfc_box/menu_nfcbox.py &
-
-exit 0
-" > etc/rc.local
 
 echo "allow_autoscan = false
 device.connstring=\"pn532_spi:/dev/spidev0.0:2000000\"" >> etc/nfc/libnfc.conf
