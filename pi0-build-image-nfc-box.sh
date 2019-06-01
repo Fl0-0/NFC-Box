@@ -24,7 +24,7 @@ buildenv="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )/BuildEnv"
 
 distrib_name="raspbian"
 deb_mirror="http://archive.raspbian.org/raspbian"
-deb_release="stretch"
+deb_release="buster"
 deb_arch="armhf"
 echo "PI-BUILDER: Building $distrib_name Image"
 
@@ -167,7 +167,7 @@ chmod +x /root/nfc_box/remount-slash.sh
 ln -s /root/nfc_box/remount-slash.sh /root/remount-slash.sh
 wget https://raw.githubusercontent.com/Hexxeh/rpi-update/master/rpi-update -O /usr/bin/rpi-update
 chmod +x /usr/bin/rpi-update
-SKIP_WARNING=1 SKIP_BACKUP=1 UPDATE_SELF=0 rpi-update
+SKIP_WARNING=1 SKIP_BACKUP=1 UPDATE_SELF=0 CURL_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt rpi-update
 echo \"root:toor\" | chpasswd
 echo 'HWCLOCKACCESS=no' >> /etc/default/hwclock
 echo 'RAMTMP=yes' >> /etc/default/tmpfs
