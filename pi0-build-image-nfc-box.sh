@@ -148,7 +148,7 @@ debconf-set-selections /debconf.set
 rm -f /debconf.set
 apt-get update
 apt-get -y install binutils wget curl locales console-common \
-libnfc-bin i2c-tools \
+libnfc-bin i2c-tools rng-tools \
 python-minimal python-smbus python-pip python-dev libfreetype6-dev libjpeg8-dev \
 openssh-server isc-dhcp-server net-tools less vim bash-completion
 export LANGUAGE=en_US.UTF-8
@@ -181,6 +181,7 @@ ln -sf ../proc/self/mounts /etc/mtab
 sed -i -e 's/^INTERFACESv4=\"\"/INTERFACESv4=\"usb0\"/' /etc/default/isc-dhcp-server
 sed -i -e 's/^#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config
 sed -i 's/^\"syntax on/syntax on/' /etc/vim/vimrc
+echo 'HRNGDEVICE=/dev/hwrng' >> /etc/default/rng-tools
 ln -sf /lib/systemd/system/nfc-box.service /etc/systemd/system/multi-user.target.wants/nfc-box.service
 rm -f third-stage
 " > third-stage
