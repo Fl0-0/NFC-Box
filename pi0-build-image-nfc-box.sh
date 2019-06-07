@@ -150,7 +150,7 @@ apt update
 apt -y install binutils wget curl locales console-common \
 libnfc-bin i2c-tools rng-tools \
 python-minimal python-smbus python-pip python-dev libfreetype6-dev libjpeg8-dev \
-openssh-server isc-dhcp-server net-tools less vim bash-completion
+openssh-server isc-dhcp-server net-tools less vim bash-completion htop tmux
 export LANGUAGE=en_US.UTF-8
 export LANG=en_US.UTF-8
 export LC_ALL=en_US.UTF-8
@@ -171,6 +171,7 @@ SKIP_WARNING=1 SKIP_BACKUP=1 UPDATE_SELF=0 CURL_CA_BUNDLE=/etc/ssl/certs/ca-cert
 echo \"root:toor\" | chpasswd
 echo 'HWCLOCKACCESS=no' >> /etc/default/hwclock
 echo 'RAMTMP=yes' >> /etc/default/tmpfs
+echo 'set-option -g mouse on' >> /root/.tmux.conf
 ln -sf /usr/lib/systemd/system/multi-user.target /etc/systemd/system/default.target
 ln -s /tmp/random-seed /var/lib/systemd/random-seed
 echo \"ExecStartPre=/bin/echo '' >/tmp/random-seed\" >> /lib/systemd/system/systemd-random-seed.service
