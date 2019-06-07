@@ -146,8 +146,8 @@ echo "#!/bin/bash
 export DEBIAN_FRONTEND=noninteractive
 debconf-set-selections /debconf.set
 rm -f /debconf.set
-apt-get update
-apt-get -y install binutils wget curl locales console-common \
+apt update
+apt -y install binutils wget curl locales console-common \
 libnfc-bin i2c-tools rng-tools \
 python-minimal python-smbus python-pip python-dev libfreetype6-dev libjpeg8-dev \
 openssh-server isc-dhcp-server net-tools less vim bash-completion
@@ -156,10 +156,10 @@ export LANG=en_US.UTF-8
 export LC_ALL=en_US.UTF-8
 echo 'en_US.UTF-8 UTF-8' > /etc/locale.gen
 locale-gen
-apt-get -y dist-upgrade
-apt-get -y install ttf-mscorefonts-installer
-apt-get -y autoremove --purge
-apt-get -y autoclean
+apt -y dist-upgrade
+apt -y install ttf-mscorefonts-installer
+apt -y autoremove --purge
+apt -y autoclean
 pip install Pillow==4.1.1 RPi.GPIO luma.oled
 chmod +x /root/nfc_box/menu_nfcbox.py
 chmod +x /usr/bin/mfoc
