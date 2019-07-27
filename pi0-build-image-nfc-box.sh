@@ -15,7 +15,7 @@ mydate=`date +%Y%m%d-%H%M`
 
 # Size of the image and boot partitions
 imgsize="1800M"
-bootsize="64M"
+bootsize="128M"
 
 # Location of the build environment, where the image will be mounted during build
 basedir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
