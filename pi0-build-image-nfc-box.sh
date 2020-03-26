@@ -11,7 +11,7 @@
 # To Do: Error Checking
 
 # Date format, used in the image file name
-mydate=`date +%Y%m%d-%H%M`
+mydate=$(date +%Y%m%d-%H%M)
 
 # Size of the image and boot partitions
 imgsize="1800M"
@@ -35,27 +35,27 @@ if [ $EUID -ne 0 ]; then
 fi
 
 # make sure no builds are in process (which should never be an issue)
-if [ -e ./.pibuild-$1 ]; then
+if [ -e ./.pibuild-"$1" ]; then
 	echo "PI-BUILDER: Build already in process, aborting"
 	exit 1
 else
-	touch ./.pibuild-$1
+	touch ./.pibuild-"$1"
 fi
 
 # Create the buildenv folder
-mkdir -p $buildenv
-cd $buildenv
+mkdir -p "$buildenv"
+cd "$buildenv" || exit
 
 #  start the debootstrap of the system
 echo "PI-BUILDER: debootstraping..."
-debootstrap --no-check-gpg --foreign --arch $deb_arch $deb_release $buildenv $deb_mirror
+debootstrap --no-check-gpg --foreign --arch "$deb_arch" "$deb_release" "$buildenv" "$deb_mirror"
 cp /usr/bin/qemu-arm-static usr/bin/
 
 # Copy files before chroot
-cp -r $basedir/nfc_box root/
-cp $basedir/mfoc usr/bin/
+cp -r "$basedir"/nfc_box root/
+cp "$basedir"/mfoc usr/bin/
 
-LANG=C chroot $buildenv /debootstrap/debootstrap --second-stage
+LANG=C chroot "$buildenv" /debootstrap/debootstrap --second-stage
 
 # Start adding content to the system files
 echo "PI-BUILDER: Setting up custom files/settings relating to rpi"
@@ -187,7 +187,7 @@ ln -sf /lib/systemd/system/nfc-box.service /etc/systemd/system/multi-user.target
 rm -f third-stage
 " > third-stage
 chmod +x third-stage
-LANG=C chroot $buildenv /third-stage
+LANG=C chroot "$buildenv" /third-stage
 
 echo 'ddns-update-style none;
 option domain-name "domain.local";
@@ -214,9 +214,9 @@ rm -r /root/.rpi-firmware > /dev/null 2>&1
 rm -f cleanup
 " > cleanup
 chmod +x cleanup
-LANG=C chroot $buildenv /cleanup
+LANG=C chroot "$buildenv" /cleanup
 
-cd $basedir
+cd "$basedir" || exit
 
 # folders in the basedir to be mounted, one for rootfs, one for /boot
 rootfs="${basedir}/rootfs"
@@ -225,13 +225,13 @@ bootfs="${rootfs}/boot"
 # Create the image file
 echo "PI-BUILDER: Creating Image file"
 image="${basedir}/rpi_${distrib_name}_${deb_release}_${deb_arch}_${mydate}.img"
-dd if=/dev/zero of=$image bs=$imgsize count=1
-device=`losetup -f --show $image`
+dd if=/dev/zero of="$image" bs="$imgsize" count=1
+device=$(losetup -f --show "$image")
 echo "PI-BUILDER: Image $image created and mounted as $device"
 
 # Format the image file partitions
 echo "PI-BUILDER: Setting up MBR/Partitions"
-fdisk $device << EOF
+fdisk "$device" << EOF
 n
 p
 1
@@ -251,44 +251,44 @@ EOF
 partprobe
 
 # Mount the loopback device so we can modify the image, format the partitions, and mount/cd into rootfs
-device=`kpartx -va $image | sed -E 's/.*(loop[0-9])p.*/\1/g' | head -1`
+device=$(kpartx -va "$image" | sed -E 's/.*(loop[0-9])p.*/\1/g' | head -1)
 sleep 1 # Without this, we sometimes miss the mapper device!
 device="/dev/mapper/${device}"
 bootp=${device}p1
 rootp=${device}p2
 echo "PI-BUILDER: Formatting Partitions"
-mkfs.vfat $bootp
-mkfs.ext4 $rootp -L root
-mkdir -p $rootfs
-mount $rootp $rootfs
-cd $rootfs
+mkfs.vfat "$bootp"
+mkfs.ext4 "$rootp" -L root
+mkdir -p "$rootfs"
+mount "$rootp" "$rootfs"
+cd "$rootfs" || exit
 mkdir boot
 
 # Mount the boot partition
-mount -t vfat $bootp $bootfs
+mount -t vfat "$bootp" "$bootfs"
 
 echo "Rsyncing rootfs into image file"
-rsync -HPavz -q ${buildenv}/ ${rootfs}/
+rsync -HPavz -q "${buildenv}"/ "${rootfs}"/
 sync
 
 # Unmount some partitions
 echo "PI-BUILDER: Unmounting Partitions"
-umount -l $bootp
-umount -l $rootp
-kpartx -d $image
+umount -l "$bootp"
+umount -l "$rootp"
+kpartx -d "$image"
 
 # Properly terminate the loopback devices
 echo "PI-BUILDER: Finished making the image $image"
 dmsetup remove_all
 losetup -D
 
-cd $basedir
+cd "$basedir" || exit
 
 # Compressing with xz and terminating
 echo "PI-BUILDER: Compressing, then terminating"
-xz -9 -T 0 ./rpi_${distrib_name}_${deb_release}_${deb_arch}_${mydate}.img
-rm ./.pibuild-$1
-rm -Rf $buildenv
-rm -Rf $rootfs
+xz -9 -T 0 ./rpi_"${distrib_name}"_"${deb_release}"_"${deb_arch}"_"${mydate}".img
+rm ./.pibuild-"$1"
+rm -Rf "$buildenv"
+rm -Rf "$rootfs"
 echo "PI-BUILDER: Finished!"
 exit 0
