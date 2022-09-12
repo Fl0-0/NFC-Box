@@ -24,7 +24,7 @@ buildenv="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )/BuildEnv"
 
 distrib_name="raspbian"
 deb_mirror="http://archive.raspbian.org/raspbian"
-deb_release="buster"
+deb_release="bookworm"
 deb_arch="armhf"
 echo "PI-BUILDER: Building $distrib_name Image"
 
@@ -36,10 +36,10 @@ fi
 
 # make sure no builds are in process (which should never be an issue)
 if [ -e ./.pibuild-"$1" ]; then
-	echo "PI-BUILDER: Build already in process, aborting"
-	exit 1
+    echo "PI-BUILDER: Build already in process, aborting"
+    exit 1
 else
-	touch ./.pibuild-"$1"
+    touch ./.pibuild-"$1"
 fi
 
 # Create the buildenv folder
@@ -48,12 +48,11 @@ cd "$buildenv" || exit
 
 #  start the debootstrap of the system
 echo "PI-BUILDER: debootstraping..."
-debootstrap --no-check-gpg --foreign --arch "$deb_arch" "$deb_release" "$buildenv" "$deb_mirror"
+debootstrap --variant=minbase --no-check-gpg --foreign --arch "$deb_arch" "$deb_release" "$buildenv" "$deb_mirror"
 cp /usr/bin/qemu-arm-static usr/bin/
 
 # Copy files before chroot
 cp -r "$basedir"/nfc_box root/
-cp "$basedir"/mfoc usr/bin/
 
 LANG=C chroot "$buildenv" /debootstrap/debootstrap --second-stage
 
@@ -85,10 +84,6 @@ echo "i2c-dev
 dwc2
 g_ether" >> etc/modules
 
-# IBM Remote USB RNDIS vendor and product IDs for Windows auto detection
-echo "options g_ether idVendor=0x04b3 idProduct=0x4010
-" > etc/modprobe.d/g_ether.conf
-
 # Mounts
 echo "proc            /proc           proc    defaults        0       0
 /dev/mmcblk0p1  /boot           vfat    defaults,ro        0       0
@@ -103,21 +98,6 @@ tmpfs	/tmp	tmpfs	nodev,nosuid	0	0
 host_name="pi0"
 echo "${host_name}" > etc/hostname
 echo "127.0.1.1	${host_name}" >> etc/host
-
-# Networking
-echo "auto lo
-iface lo inet loopback
-
-#iallow-hotplug eth0
-#iface eth0 inet dhcp
-#iface eth0 inet6 dhcp
-auto usb0
-allow-hotplug usb0
-iface usb0 inet static
-address 192.168.2.1
-netmask 255.255.255.0
-#gateway 192.168.2.1
-" > etc/network/interfaces
 
 # Console settings
 echo "console-common	console-data/keymap/policy	select	Select keymap from full list
@@ -147,9 +127,9 @@ export DEBIAN_FRONTEND=noninteractive
 debconf-set-selections /debconf.set
 rm -f /debconf.set
 apt update
-apt -y install binutils wget curl locales console-common \
-libnfc-bin i2c-tools rng-tools \
-python-minimal python-smbus python-pip python-dev libfreetype6-dev libjpeg8-dev \
+apt -y install gcc binutils wget curl locales console-common \
+libnfc-bin mfoc i2c-tools rng-tools kmod ifupdown \
+python2-minimal python2-dev libfreetype6-dev libjpeg-dev \
 openssh-server isc-dhcp-server net-tools less vim bash-completion htop tmux
 export LANGUAGE=en_US.UTF-8
 export LANG=en_US.UTF-8
@@ -160,9 +140,11 @@ apt -y dist-upgrade
 apt -y install ttf-mscorefonts-installer
 apt -y autoremove --purge
 apt -y autoclean
-pip install Pillow==4.1.1 RPi.GPIO luma.oled
+curl https://bootstrap.pypa.io/pip/2.7/get-pip.py --output /get-pip.py
+python2 /get-pip.py
+rm /get-pip.py
+pip install smbus2 Pillow==6.2.2 RPi.GPIO luma.oled==3.4.0 luma.core==1.13.0
 chmod +x /root/nfc_box/menu_nfcbox.py
-chmod +x /usr/bin/mfoc
 chmod +x /root/nfc_box/remount-slash.sh
 ln -s /root/nfc_box/remount-slash.sh /root/remount-slash.sh
 wget https://raw.githubusercontent.com/Hexxeh/rpi-update/master/rpi-update -O /usr/bin/rpi-update
@@ -184,10 +166,31 @@ sed -i -e 's/^#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/
 sed -i 's/^\"syntax on/syntax on/' /etc/vim/vimrc
 echo 'HRNGDEVICE=/dev/hwrng' >> /etc/default/rng-tools
 ln -sf /lib/systemd/system/nfc-box.service /etc/systemd/system/multi-user.target.wants/nfc-box.service
+ln -s /dev/null /etc/systemd/system/modprobe@drm.service
+ln -s /dev/null /etc/systemd/system/systemd-logind.service
 rm -f third-stage
 " > third-stage
 chmod +x third-stage
 LANG=C chroot "$buildenv" /third-stage
+
+# Networking
+echo "auto lo
+iface lo inet loopback
+
+#iallow-hotplug eth0
+#iface eth0 inet dhcp
+#iface eth0 inet6 dhcp
+auto usb0
+allow-hotplug usb0
+iface usb0 inet static
+address 192.168.2.1
+netmask 255.255.255.0
+#gateway 192.168.2.1
+" > etc/network/interfaces
+
+# IBM Remote USB RNDIS vendor and product IDs for Windows auto detection
+echo "options g_ether idVendor=0x04b3 idProduct=0x4010
+" > etc/modprobe.d/g_ether.conf
 
 echo 'ddns-update-style none;
 option domain-name "domain.local";
